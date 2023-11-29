@@ -5,7 +5,7 @@ import (
 
 	consulapi "github.com/hashicorp/consul/api"
 	"github.com/stretchr/testify/assert"
-	"github.com/tczekajlo/kube-consul-register/config"
+	"github.com/warjiang/kube-consul-register/config"
 	"k8s.io/client-go/pkg/api/v1"
 	"k8s.io/client-go/pkg/util/intstr"
 )

@@ -1,4 +1,4 @@
-# Kubernetes Consul Register [![Build Status](https://travis-ci.org/tczekajlo/kube-consul-register.svg?branch=master)](https://travis-ci.org/tczekajlo/kube-consul-register)
+# Kubernetes Consul Register [![Build Status](https://travis-ci.org/warjiang/kube-consul-register.svg?branch=master)](https://travis-ci.org/warjiang/kube-consul-register)
 The kube-consul-register is a tool to register Kubernetes PODs as Consul Services.
 
 kube-consul-register watches Kubernetes events and converts information about PODs to Consul Agent.
@@ -39,7 +39,7 @@ kube-consul-register watches Kubernetes events and converts information about PO
 
 ## Configuration
 To store configuration is used [ConfigMap](https://github.com/kubernetes/kubernetes/blob/master/docs/design/configmap.md).
-You can find [example of configuration](https://github.com/tczekajlo/kube-consul-register/blob/master/examples/config.yaml) with default values in examples directory.
+You can find [example of configuration](https://github.com/warjiang/kube-consul-register/blob/master/examples/config.yaml) with default values in examples directory.
 In order to use ConfigMap configuration you've to use `configmap` flag. Value of this flag has format `namespace/configmap_name`, e.g. `-configmap="default/kube-consul-register-config"`.
 
 | Option name | Default value | Description |
@@ -95,7 +95,7 @@ There are available annotations which can be used as pod's annotations.
 |`consul.register/pod.container.probe.readiness`|`true`\|`false`|Use container `Readiness probe` for checks. Default is `false`|
 
 
-The example of how to use annotation you can see [here](https://github.com/tczekajlo/kube-consul-register/blob/master/examples/nginx.yaml).
+The example of how to use annotation you can see [here](https://github.com/warjiang/kube-consul-register/blob/master/examples/nginx.yaml).
 
 ## Examples of usage
 ### Run out-of-cluster
@@ -106,7 +106,7 @@ $ kube-consul-register -logtostderr=true -kubeconfig=/my/kubeconfig -configmap="
 
 ### Run in-cluster
 
-Example of usage in-cluster you can find [here](https://github.com/tczekajlo/kube-consul-register/blob/master/examples/rs.yaml). `kube-consul-register` is run as ReplicaSet.
+Example of usage in-cluster you can find [here](https://github.com/warjiang/kube-consul-register/blob/master/examples/rs.yaml). `kube-consul-register` is run as ReplicaSet.
 
 ## Metrics
 Prometheus metrics are available by `/metrics` endpoint on `:8080` address.

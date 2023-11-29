@@ -8,7 +8,7 @@ import (
 
 	consulapi "github.com/hashicorp/consul/api"
 
-	"github.com/tczekajlo/kube-consul-register/config"
+	"github.com/warjiang/kube-consul-register/config"
 )
 
 func TestNew(t *testing.T) {
