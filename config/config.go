@@ -1,7 +1,9 @@
 package config
 
 import (
+	"context"
 	"fmt"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"strconv"
 	"time"
 
@@ -57,7 +59,7 @@ var config = &Config{}
 func Load(clientset *kubernetes.Clientset, namespace string, name string) (*Config, error) {
 	var filledConfig *Config
 
-	cfg, err := clientset.CoreV1().ConfigMaps(namespace).Get(name)
+	cfg, err := clientset.CoreV1().ConfigMaps(namespace).Get(context.TODO(), name, metav1.GetOptions{})
 	if err != nil {
 		return config, fmt.Errorf(err.Error())
 	}

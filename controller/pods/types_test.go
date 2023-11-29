@@ -1,12 +1,12 @@
 package pods
 
 import (
+	v1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/types"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
-
-	"k8s.io/client-go/pkg/api/v1"
-	"k8s.io/client-go/pkg/types"
 )
 
 func TestPodInfoSave(t *testing.T) {
@@ -19,7 +19,7 @@ func TestPodInfoSave(t *testing.T) {
 	annotations["consul.register/enabled"] = "true"
 
 	objPod := &v1.Pod{
-		ObjectMeta: v1.ObjectMeta{
+		ObjectMeta: metav1.ObjectMeta{
 			UID:         "01234567-89ab-cdef-0123-456789abcdef",
 			Name:        "podname",
 			Namespace:   "default",

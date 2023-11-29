@@ -2,8 +2,8 @@ package pods
 
 import (
 	"github.com/golang/glog"
-	"k8s.io/client-go/pkg/api/v1"
-	"k8s.io/client-go/pkg/types"
+	v1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/types"
 )
 
 // FactoryAdapter has a method to work with Controller resources.
