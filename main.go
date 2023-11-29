@@ -1,8 +1,10 @@
 package main
 
 import (
+	"context"
 	"flag"
 	"fmt"
+	v1 "k8s.io/api/core/v1"
 	"net/http"
 	"os"
 	"os/signal"
@@ -18,8 +20,8 @@ import (
 	"github.com/warjiang/kube-consul-register/controller"
 	"github.com/warjiang/kube-consul-register/metrics"
 	"github.com/warjiang/kube-consul-register/utils"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
-	v1 "k8s.io/client-go/pkg/api/v1"
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/clientcmd"
 )
@@ -101,7 +103,7 @@ func main() {
 		if err != nil {
 			glog.Fatalf("Secret: %v", err)
 		}
-		secretResource, err := clientset.CoreV1().Secrets(namespace).Get(name)
+		secretResource, err := clientset.CoreV1().Secrets(namespace).Get(context.TODO(), name, metav1.GetOptions{})
 		if err != nil {
 			glog.Fatalf("can't get secret %s: %s", *consulSecret, err)
 		}

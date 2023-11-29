@@ -1,7 +1,12 @@
 package endpoints
 
 import (
+	"context"
 	"fmt"
+	"k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/fields"
+	"k8s.io/apimachinery/pkg/types"
 	"strconv"
 	"sync"
 	"time"
@@ -14,9 +19,6 @@ import (
 	"github.com/warjiang/kube-consul-register/utils"
 
 	"k8s.io/client-go/kubernetes"
-	"k8s.io/client-go/pkg/api/v1"
-	"k8s.io/client-go/pkg/fields"
-	"k8s.io/client-go/pkg/types"
 	"k8s.io/client-go/tools/cache"
 
 	consulapi "github.com/hashicorp/consul/api"
@@ -54,6 +56,7 @@ func New(clientset *kubernetes.Clientset, consulInstance consul.Adapter, cfg *co
 }
 
 func (c *Controller) cacheConsulAgent() (map[string]*consul.Adapter, error) {
+	ctx := context.TODO()
 	consulAgents = make(map[string]*consul.Adapter)
 	//Cache Consul's Agents
 	if c.cfg.Controller.RegisterMode == config.RegisterSingleMode {
@@ -61,7 +64,7 @@ func (c *Controller) cacheConsulAgent() (map[string]*consul.Adapter, error) {
 		consulAgents[c.cfg.Controller.ConsulAddress] = consulAgent
 
 	} else if c.cfg.Controller.RegisterMode == config.RegisterNodeMode {
-		nodes, err := c.clientset.CoreV1().Nodes().List(v1.ListOptions{
+		nodes, err := c.clientset.CoreV1().Nodes().List(ctx, metav1.ListOptions{
 			LabelSelector: c.cfg.Controller.ConsulNodeSelector,
 		})
 		if err != nil {
@@ -74,7 +77,7 @@ func (c *Controller) cacheConsulAgent() (map[string]*consul.Adapter, error) {
 			consulAgents[node.ObjectMeta.Name] = consulAgent
 		}
 	} else if c.cfg.Controller.RegisterMode == config.RegisterPodMode {
-		pods, err := c.clientset.CoreV1().Pods("").List(v1.ListOptions{
+		pods, err := c.clientset.CoreV1().Pods("").List(ctx, metav1.ListOptions{
 			LabelSelector: c.cfg.Controller.PodLabelSelector,
 		})
 		if err != nil {
@@ -104,7 +107,6 @@ func (c *Controller) Clean() error {
 		c.mutex.Unlock()
 		return fmt.Errorf("Can't cache Consul' Agents: %s", err)
 	}
-
 	// Get list of added Consul' services
 	addedConsulServices, registeredEndpoints, err := c.getAddedConsulServices()
 	if err != nil {
@@ -112,7 +114,7 @@ func (c *Controller) Clean() error {
 		return err
 	}
 
-	endpoints, err := c.clientset.CoreV1().Endpoints("").List(v1.ListOptions{})
+	endpoints, err := c.clientset.CoreV1().Endpoints("").List(context.TODO(), metav1.ListOptions{})
 	if err != nil {
 		return err
 	}
@@ -182,7 +184,7 @@ func (c *Controller) Sync() error {
 	}
 	glog.V(3).Infof("Added services: %#v", addedConsulServices)
 
-	endpoints, err := c.clientset.CoreV1().Endpoints("").List(v1.ListOptions{})
+	endpoints, err := c.clientset.CoreV1().Endpoints("").List(context.TODO(), metav1.ListOptions{})
 	if err != nil {
 		return err
 	}
@@ -385,7 +387,7 @@ func (c *Controller) eventUpdateFunc(oldObj interface{}, newObj interface{}) err
 }
 
 func (c *Controller) getPod(namespace string, podName string) (*v1.Pod, error) {
-	pod, err := c.clientset.CoreV1().Pods(namespace).Get(podName)
+	pod, err := c.clientset.CoreV1().Pods(namespace).Get(context.TODO(), podName, metav1.GetOptions{})
 	if err != nil {
 		return nil, err
 	}

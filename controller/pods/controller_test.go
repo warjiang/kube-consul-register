@@ -1,13 +1,16 @@
 package pods
 
 import (
+	"k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/util/intstr"
 	"testing"
 
 	consulapi "github.com/hashicorp/consul/api"
 	"github.com/stretchr/testify/assert"
 	"github.com/warjiang/kube-consul-register/config"
-	"k8s.io/client-go/pkg/api/v1"
-	"k8s.io/client-go/pkg/util/intstr"
+	//"k8s.io/client-go/pkg/api/v1"
+	//"k8s.io/client-go/pkg/util/intstr"
 )
 
 func TestPodInfoMethods(t *testing.T) {
@@ -24,7 +27,7 @@ func TestPodInfoMethods(t *testing.T) {
 	annotations["consul.register/service.meta.XYZ"] = "790_0"
 
 	objPod := &v1.Pod{
-		ObjectMeta: v1.ObjectMeta{
+		ObjectMeta: metav1.ObjectMeta{
 			UID:         "01234567-89ab-cdef-0123-456789abcdef",
 			Name:        "podname",
 			Namespace:   "default",
@@ -77,7 +80,7 @@ func TestProbeToConsulCheck(t *testing.T) {
 	podInfo := &PodInfo{IP: "192.168.8.8"}
 
 	httpProbe := &v1.Probe{
-		Handler: v1.Handler{
+		ProbeHandler: v1.ProbeHandler{
 			HTTPGet: &v1.HTTPGetAction{
 				Scheme: "http",
 				Path:   "/ping",
@@ -87,7 +90,7 @@ func TestProbeToConsulCheck(t *testing.T) {
 	}
 
 	tcpProbe := &v1.Probe{
-		Handler: v1.Handler{
+		ProbeHandler: v1.ProbeHandler{
 			TCPSocket: &v1.TCPSocketAction{
 				Port: intstr.IntOrString{IntVal: 5432},
 			},
@@ -95,7 +98,7 @@ func TestProbeToConsulCheck(t *testing.T) {
 	}
 
 	execProbe := &v1.Probe{
-		Handler: v1.Handler{
+		ProbeHandler: v1.ProbeHandler{
 			Exec: &v1.ExecAction{
 				Command: []string{"some-command-to-check"},
 			},

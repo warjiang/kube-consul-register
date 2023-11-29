@@ -1,8 +1,12 @@
 package pods
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/fields"
+	"k8s.io/apimachinery/pkg/types"
 	"strconv"
 	"strings"
 	"sync"
@@ -16,12 +20,10 @@ import (
 	"github.com/warjiang/kube-consul-register/utils"
 
 	"k8s.io/client-go/kubernetes"
-	"k8s.io/client-go/pkg/api/v1"
-	"k8s.io/client-go/pkg/fields"
-	"k8s.io/client-go/pkg/types"
 	"k8s.io/client-go/tools/cache"
 
 	consulapi "github.com/hashicorp/consul/api"
+	"k8s.io/api/core/v1"
 )
 
 // These are valid annotations names which are take into account.
@@ -74,13 +76,14 @@ func New(clientset *kubernetes.Clientset, consulInstance consul.Adapter, cfg *co
 
 func (c *Controller) cacheConsulAgent() (map[string]*consul.Adapter, error) {
 	consulAgents = make(map[string]*consul.Adapter)
+	ctx := context.TODO()
 	//Cache Consul's Agents
 	if c.cfg.Controller.RegisterMode == config.RegisterSingleMode {
 		consulAgent := c.consulInstance.New(c.cfg, "", "")
 		consulAgents[c.cfg.Controller.ConsulAddress] = consulAgent
 
 	} else if c.cfg.Controller.RegisterMode == config.RegisterNodeMode {
-		nodes, err := c.clientset.CoreV1().Nodes().List(v1.ListOptions{
+		nodes, err := c.clientset.CoreV1().Nodes().List(ctx, metav1.ListOptions{
 			LabelSelector: c.cfg.Controller.ConsulNodeSelector,
 		})
 		if err != nil {
@@ -93,7 +96,7 @@ func (c *Controller) cacheConsulAgent() (map[string]*consul.Adapter, error) {
 			consulAgents[node.ObjectMeta.Name] = consulAgent
 		}
 	} else if c.cfg.Controller.RegisterMode == config.RegisterPodMode {
-		pods, err := c.clientset.CoreV1().Pods(c.namespace).List(v1.ListOptions{
+		pods, err := c.clientset.CoreV1().Pods(c.namespace).List(ctx, metav1.ListOptions{
 			LabelSelector: c.cfg.Controller.PodLabelSelector,
 		})
 		if err != nil {
@@ -133,7 +136,7 @@ func (c *Controller) Clean() error {
 	}
 
 	// Make list of Kubernetes PODs
-	pods, err := c.clientset.CoreV1().Pods(c.namespace).List(v1.ListOptions{
+	pods, err := c.clientset.CoreV1().Pods(c.namespace).List(context.TODO(), metav1.ListOptions{
 		LabelSelector: c.cfg.Controller.PodLabelSelector,
 	})
 	if err != nil {
@@ -200,7 +203,7 @@ func (c *Controller) Sync() error {
 	}
 	glog.V(3).Infof("Added services: %#v", addedConsulServices)
 
-	pods, err := c.clientset.CoreV1().Pods(c.namespace).List(v1.ListOptions{
+	pods, err := c.clientset.CoreV1().Pods(c.namespace).List(context.TODO(), metav1.ListOptions{
 		LabelSelector: c.cfg.Controller.PodLabelSelector,
 	})
 	if err != nil {
@@ -538,7 +541,7 @@ func (p *PodInfo) probeToConsulCheck(probe *v1.Probe, probeName string) *consula
 		return check
 	}
 
-	if probe.Handler.Exec != nil {
+	if probe.ProbeHandler.Exec != nil {
 		return check
 	}
 
@@ -549,13 +552,13 @@ func (p *PodInfo) probeToConsulCheck(probe *v1.Probe, probeName string) *consula
 
 	host := p.IP
 
-	if probe.Handler.HTTPGet != nil {
-		if probe.Handler.HTTPGet.Host != "" {
-			host = probe.Handler.HTTPGet.Host
+	if probe.ProbeHandler.HTTPGet != nil {
+		if probe.ProbeHandler.HTTPGet.Host != "" {
+			host = probe.ProbeHandler.HTTPGet.Host
 		}
-		check.HTTP = fmt.Sprintf("%s://%s:%d%s", probe.Handler.HTTPGet.Scheme, host, probe.Handler.HTTPGet.Port.IntVal, probe.Handler.HTTPGet.Path)
-	} else if probe.Handler.TCPSocket != nil {
-		check.TCP = fmt.Sprintf("%s:%d", host, probe.Handler.TCPSocket.Port.IntVal)
+		check.HTTP = fmt.Sprintf("%s://%s:%d%s", probe.ProbeHandler.HTTPGet.Scheme, host, probe.ProbeHandler.HTTPGet.Port.IntVal, probe.ProbeHandler.HTTPGet.Path)
+	} else if probe.ProbeHandler.TCPSocket != nil {
+		check.TCP = fmt.Sprintf("%s:%d", host, probe.ProbeHandler.TCPSocket.Port.IntVal)
 	}
 	glog.V(3).Infof("Consul check: %#v", check)
 	return check

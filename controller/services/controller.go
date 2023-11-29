@@ -1,7 +1,11 @@
 package services
 
 import (
+	"context"
 	"fmt"
+	v1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/fields"
 	"strconv"
 	"strings"
 	"sync"
@@ -15,8 +19,8 @@ import (
 	"github.com/warjiang/kube-consul-register/utils"
 
 	"k8s.io/client-go/kubernetes"
-	"k8s.io/client-go/pkg/api/v1"
-	"k8s.io/client-go/pkg/fields"
+	//"k8s.io/client-go/pkg/api/v1"
+	//"k8s.io/client-go/pkg/fields"
 	"k8s.io/client-go/tools/cache"
 
 	consulapi "github.com/hashicorp/consul/api"
@@ -25,7 +29,9 @@ import (
 // These are valid annotations names which are take into account.
 // "ConsulRegisterEnabledAnnotation" is a name of annotation key for `enabled` option.
 const (
-	ConsulRegisterEnabledAnnotation string = "consul.register/enabled"
+	ConsulRegisterEnabledAnnotation            string = "consul.register/enabled"
+	ConsulRegisterServiceNameAnnotation        string = "consul.register/service.name"
+	ConsulRegisterServiceHealthCheckAnnotation string = "consul.register/service.health.path"
 )
 
 var (
@@ -55,13 +61,15 @@ func New(clientset *kubernetes.Clientset, consulInstance consul.Adapter, cfg *co
 
 func (c *Controller) cacheConsulAgent() (map[string]*consul.Adapter, error) {
 	consulAgents = make(map[string]*consul.Adapter)
+
+	ctx := context.TODO()
 	//Cache Consul's Agents
 	if c.cfg.Controller.RegisterMode == config.RegisterSingleMode {
 		consulAgent := c.consulInstance.New(c.cfg, "", "")
 		consulAgents[c.cfg.Controller.ConsulAddress] = consulAgent
 
 	} else if c.cfg.Controller.RegisterMode == config.RegisterNodeMode {
-		nodes, err := c.clientset.CoreV1().Nodes().List(v1.ListOptions{
+		nodes, err := c.clientset.CoreV1().Nodes().List(ctx, metav1.ListOptions{
 			LabelSelector: c.cfg.Controller.ConsulNodeSelector,
 		})
 		if err != nil {
@@ -74,7 +82,7 @@ func (c *Controller) cacheConsulAgent() (map[string]*consul.Adapter, error) {
 			consulAgents[node.ObjectMeta.Name] = consulAgent
 		}
 	} else if c.cfg.Controller.RegisterMode == config.RegisterPodMode {
-		pods, err := c.clientset.CoreV1().Pods("").List(v1.ListOptions{
+		pods, err := c.clientset.CoreV1().Pods("").List(context.TODO(), metav1.ListOptions{
 			LabelSelector: c.cfg.Controller.PodLabelSelector,
 		})
 		if err != nil {
@@ -115,7 +123,7 @@ func (c *Controller) Clean() error {
 	}
 	glog.V(3).Infof("Added services: %#v", addedConsulServices)
 
-	allServices, err := c.clientset.CoreV1().Services(c.namespace).List(v1.ListOptions{})
+	allServices, err := c.clientset.CoreV1().Services(c.namespace).List(context.TODO(), metav1.ListOptions{})
 	if err != nil {
 		c.mutex.Unlock()
 		return err
@@ -180,7 +188,7 @@ func (c *Controller) Sync() error {
 	}
 	glog.V(3).Infof("Added services: %#v", addedConsulServices)
 
-	allServices, err := c.clientset.CoreV1().Services(c.namespace).List(v1.ListOptions{})
+	allServices, err := c.clientset.CoreV1().Services(c.namespace).List(context.TODO(), metav1.ListOptions{})
 	if err != nil {
 		c.mutex.Unlock()
 		return err
@@ -283,7 +291,7 @@ func (c *Controller) watchNodes() {
 			AddFunc: func(obj interface{}) {
 				c.mutex.Lock()
 				glog.Info("Add node.")
-				allServices, err := c.clientset.CoreV1().Services(c.namespace).List(v1.ListOptions{})
+				allServices, err := c.clientset.CoreV1().Services(c.namespace).List(context.TODO(), metav1.ListOptions{})
 				if err != nil {
 					c.mutex.Unlock()
 				}
@@ -497,11 +505,11 @@ func (c *Controller) eventAddFunc(obj interface{}) error {
 }
 
 func (c *Controller) getNodesIPs() ([]string, error) {
-	var listOptions v1.ListOptions
+	var listOptions metav1.ListOptions
 	if c.cfg.Controller.RegisterMode == config.RegisterNodeMode {
 		listOptions.LabelSelector = c.cfg.Controller.ConsulNodeSelector
 	}
-	nodes, err := c.clientset.CoreV1().Nodes().List(listOptions)
+	nodes, err := c.clientset.CoreV1().Nodes().List(context.TODO(), listOptions)
 	if err != nil {
 		return nil, err
 	}
@@ -577,6 +585,9 @@ func (c *Controller) createConsulService(svc *v1.Service, address string, port i
 
 	service.ID = fmt.Sprintf("%s-%s-%s-%d", svc.ObjectMeta.Name, svc.ObjectMeta.UID, address, port)
 	service.Name = svc.ObjectMeta.Name
+	if serviceName, ok := svc.ObjectMeta.Annotations[ConsulRegisterServiceNameAnnotation]; ok {
+		service.Name = serviceName
+	}
 
 	//Add K8sTag from configuration
 	service.Tags = []string{c.cfg.Controller.K8sTag}
@@ -585,7 +596,15 @@ func (c *Controller) createConsulService(svc *v1.Service, address string, port i
 
 	service.Port = int(port)
 	service.Address = address
-
+	if healthCheck, ok := svc.ObjectMeta.Annotations[ConsulRegisterServiceHealthCheckAnnotation]; ok && healthCheck != "" {
+		service.Checks = append(service.Checks, &consulapi.AgentServiceCheck{
+			Name:     fmt.Sprintf("health-check-%s", service.Name),
+			Status:   "passing",
+			Interval: "10s",
+			Timeout:  "5s",
+			HTTP:     fmt.Sprintf("%s://%s:%d%s", svc.Spec.Ports[0].Protocol, address, port, healthCheck),
+		})
+	}
 	return service, nil
 }
 
