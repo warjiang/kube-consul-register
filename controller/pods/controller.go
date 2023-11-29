@@ -10,10 +10,10 @@ import (
 
 	"github.com/golang/glog"
 	"github.com/prometheus/client_golang/prometheus"
-	"github.com/tczekajlo/kube-consul-register/config"
-	"github.com/tczekajlo/kube-consul-register/consul"
-	"github.com/tczekajlo/kube-consul-register/metrics"
-	"github.com/tczekajlo/kube-consul-register/utils"
+	"github.com/warjiang/kube-consul-register/config"
+	"github.com/warjiang/kube-consul-register/consul"
+	"github.com/warjiang/kube-consul-register/metrics"
+	"github.com/warjiang/kube-consul-register/utils"
 
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/pkg/api/v1"
@@ -38,7 +38,7 @@ const (
 	ConsulRegisterServiceMetaPrefixAnnotation string = "consul.register/service.meta."
 	CreatedByAnnotation                       string = "kubernetes.io/created-by"
 	ExpectedContainerNamesAnnotation          string = "consul.register/pod.container.name"
-  ContainerProbeLivenessAnnotation          string = "consul.register/pod.container.probe.liveness"
+	ContainerProbeLivenessAnnotation          string = "consul.register/pod.container.probe.liveness"
 	ContainerProbeReadinessAnnotation         string = "consul.register/pod.container.probe.readiness"
 )
 
