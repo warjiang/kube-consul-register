@@ -605,13 +605,15 @@ func (c *Controller) createConsulService(svc *v1.Service, address string, port i
 	service.Port = int(port)
 	service.Address = address
 	if healthCheck, ok := svc.ObjectMeta.Annotations[ConsulRegisterServiceHealthCheckAnnotation]; ok && healthCheck != "" {
-		service.Checks = append(service.Checks, &consulapi.AgentServiceCheck{
-			Name:     fmt.Sprintf("health-check-%s", service.Name),
-			Status:   "passing",
-			Interval: "10s",
-			Timeout:  "5s",
-			TCP:      fmt.Sprintf("%s://%s:%d", svc.Spec.Ports[0].Protocol, address, port),
-		})
+		if svc.Spec.Ports[0].Protocol == "TCP" {
+			service.Checks = append(service.Checks, &consulapi.AgentServiceCheck{
+				Name:     fmt.Sprintf("health-check-%s", service.Name),
+				Status:   "passing",
+				Interval: "5s",
+				Timeout:  "5s",
+				TCP:      fmt.Sprintf("%s:%d", address, port),
+			})
+		}
 	}
 	return service, nil
 }
