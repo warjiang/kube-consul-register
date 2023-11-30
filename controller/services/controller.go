@@ -610,7 +610,7 @@ func (c *Controller) createConsulService(svc *v1.Service, address string, port i
 			Status:   "passing",
 			Interval: "10s",
 			Timeout:  "5s",
-			TCP:      fmt.Sprintf("%s://%s:%d%s", svc.Spec.Ports[0].Protocol, address, port, healthCheck),
+			TCP:      fmt.Sprintf("%s://%s:%d", svc.Spec.Ports[0].Protocol, address, port),
 		})
 	}
 	return service, nil
