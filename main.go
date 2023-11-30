@@ -61,7 +61,7 @@ func main() {
 		os.Exit(0)
 	}
 
-	glog.Infof("Using build: %v", VERSION)
+	glog.Infof("Using build: %v; build id:%d", VERSION, 1000)
 
 	var err error
 	var kubeClientConfig *rest.Config
