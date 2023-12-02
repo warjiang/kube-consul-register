@@ -693,3 +693,13 @@ func isRegisterEnabled(obj interface{}) bool {
 	}
 	return true
 }
+
+func (c *Controller) syncPod(ctx context.Context) error {
+	panic("unimplemented syncPod")
+}
+func (c *Controller) watchPod(ctx context.Context) {
+	panic("unimplemented watchPod")
+}
+func (c *Controller) cleanPod(ctx context.Context) error {
+	panic("unimplemented cleanPod")
+}
