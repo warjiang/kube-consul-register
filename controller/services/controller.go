@@ -473,20 +473,12 @@ func (c *Controller) eventAddFunc(obj interface{}) error {
 		// Check if ExternalIPs is empty
 		if len(obj.(*v1.Service).Spec.ExternalIPs) > 0 {
 			nodesIPs = obj.(*v1.Service).Spec.ExternalIPs
-		} else if len(obj.(*v1.Service).Spec.ClusterIP) > 0 {
-			nodesIPs = []string{obj.(*v1.Service).Spec.ClusterIP}
 		} else {
 			return nil
 		}
 		for _, port := range obj.(*v1.Service).Spec.Ports {
 			if port.Protocol == v1.ProtocolTCP {
-				// [bug] ???
-				// ports = append(ports, port.NodePort)
-				if port.Port != 0 {
-					ports = append(ports, port.Port)
-				} else {
-					ports = append(ports, port.NodePort)
-				}
+				ports = append(ports, port.NodePort)
 			}
 		}
 
@@ -700,4 +692,14 @@ func isRegisterEnabled(obj interface{}) bool {
 		return false
 	}
 	return true
+}
+
+func (c *Controller) syncPod(ctx context.Context) error {
+	panic("unimplemented syncPod")
+}
+func (c *Controller) watchPod(ctx context.Context) {
+	panic("unimplemented watchPod")
+}
+func (c *Controller) cleanPod(ctx context.Context) error {
+	panic("unimplemented cleanPod")
 }
