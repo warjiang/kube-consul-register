@@ -29,9 +29,16 @@ import (
 // These are valid annotations names which are take into account.
 // "ConsulRegisterEnabledAnnotation" is a name of annotation key for `enabled` option.
 const (
-	ConsulRegisterEnabledAnnotation            string = "consul.register/enabled"
-	ConsulRegisterServiceNameAnnotation        string = "consul.register/service.name"
-	ConsulRegisterServiceHealthCheckAnnotation string = "consul.register/service.health.path"
+	ConsulRegisterEnabledAnnotation                string = "consul.register/enabled"
+	ConsulRegisterServiceNameAnnotation            string = "consul.register/service.name"
+	ConsulRegisterServiceTags                      string = "consul.register/service.tags"
+	ConsulRegisterServiceHealthIntervalAnnotation  string = "consul.register/service.health.interval"
+	ConsulRegisterServiceHealthTimeoutAnnotation   string = "consul.register/service.health.timeout"
+	ConsulRegisterServiceHealthCheckPathAnnotation string = "consul.register/service.health.path"
+	ConsulRegisterServiceHealthHostAnnotation      string = "consul.register/service.health.host"
+	ConsulRegisterServiceHealthPortAnnotation      string = "consul.register/service.health.port"
+	ConsulRegisterServiceHealthTTLAnnotation       string = "consul.register/service.health.ttl"
+	ConsulRegisterServiceHealthTCPAnnotation       string = "consul.register/service.health.tcp"
 )
 
 var (
@@ -75,10 +82,12 @@ func (c *Controller) cacheConsulAgent() (map[string]*consul.Adapter, error) {
 		if err != nil {
 			return consulAgents, err
 		}
-
+		// !! should mount /etc/hosts to pod
+		// may be the name of node.ObjectMeta.Name is the hostname of node, not real ip address
 		for _, node := range nodes.Items {
 			consulInstance := consul.Adapter{}
-			consulAgent := consulInstance.New(c.cfg, node.ObjectMeta.Name, "")
+			_ = utils.GetHostIP(node)
+			consulAgent := consulInstance.New(c.cfg, utils.GetHostIP(node), "")
 			consulAgents[node.ObjectMeta.Name] = consulAgent
 		}
 	} else if c.cfg.Controller.RegisterMode == config.RegisterPodMode {
@@ -600,21 +609,62 @@ func (c *Controller) createConsulService(svc *v1.Service, address string, port i
 	//Add K8sTag from configuration
 	service.Tags = []string{c.cfg.Controller.K8sTag}
 	service.Tags = append(service.Tags, fmt.Sprintf("uid:%s", svc.ObjectMeta.UID))
+
+	// if set consul.register/service.tags: "tag1,tag2,tag3", then set tags as ["tag1","tag2","tag3"]
+	if value, ok := svc.ObjectMeta.Annotations[ConsulRegisterServiceTags]; ok {
+		tags := strings.Split(value, ",")
+		for _, tag := range tags {
+			service.Tags = append(service.Tags, strings.TrimSpace(tag))
+		}
+	}
 	service.Tags = append(service.Tags, labelsToTags(svc.ObjectMeta.Labels)...)
 
 	service.Port = int(port)
 	service.Address = address
-	if healthCheck, ok := svc.ObjectMeta.Annotations[ConsulRegisterServiceHealthCheckAnnotation]; ok && healthCheck != "" {
-		if svc.Spec.Ports[0].Protocol == "TCP" {
-			service.Checks = append(service.Checks, &consulapi.AgentServiceCheck{
-				Name:     fmt.Sprintf("health-check-%s", service.Name),
-				Status:   "passing",
-				Interval: "5s",
-				Timeout:  "5s",
-				TCP:      fmt.Sprintf("%s:%d", address, port),
-			})
+
+	// generate health check for consul
+	check := &consulapi.AgentServiceCheck{}
+	// !!todo default value from configmap
+	check.Interval = "10s"
+	check.Timeout = "90s"
+	if value, ok := svc.ObjectMeta.Annotations[ConsulRegisterServiceHealthIntervalAnnotation]; ok {
+		check.Interval = fmt.Sprintf("%ss", value)
+	}
+	if value, ok := svc.ObjectMeta.Annotations[ConsulRegisterServiceHealthTimeoutAnnotation]; ok {
+		check.Timeout = fmt.Sprintf("%ss", value)
+	}
+
+	healthHost := address
+	if value, ok := svc.ObjectMeta.Annotations[ConsulRegisterServiceHealthHostAnnotation]; ok {
+		healthHost = value
+	}
+
+	healthPort := port
+	if value, ok := svc.ObjectMeta.Annotations[ConsulRegisterServiceHealthPortAnnotation]; ok {
+		annotationPort, err := strconv.ParseInt(value, 10, 32)
+		if err != nil {
+			glog.Errorf("Can't convert value of %s annotation: %s", ConsulRegisterServiceHealthPortAnnotation, err)
+			return nil, err
+		} else {
+			healthPort = int32(annotationPort)
 		}
 	}
+
+	healthPath := "/"
+	if value, ok := svc.ObjectMeta.Annotations[ConsulRegisterServiceHealthCheckPathAnnotation]; ok {
+		healthPath = value
+		check.HTTP = fmt.Sprintf("%s://%s:%d%s", "http", healthHost, healthPort, healthPath)
+	} else if value, ok := svc.ObjectMeta.Annotations[ConsulRegisterServiceHealthTTLAnnotation]; ok {
+		check.TTL = value
+	} else if value, ok := svc.ObjectMeta.Annotations[ConsulRegisterServiceHealthTCPAnnotation]; ok && value != "" {
+		check.TCP = fmt.Sprintf("%s:%d", healthHost, healthPort)
+	} else {
+		check.HTTP = fmt.Sprintf("%s://%s:%d%s", "http", healthHost, healthPort, healthPath)
+	}
+
+	glog.Infof("%s tags %#v Consul check: %#v", service.Name, service.Tags, check)
+	service.Check = check
+
 	return service, nil
 }
 
