@@ -1,0 +1,49 @@
+apiVersion: v1
+kind: Service
+metadata:
+  annotations:
+    consul.register/enabled: "true"
+    consul.register/service.name: "vpc.demo.nginx"
+    consul.register/service.health.path: "/"
+    consul.register/service.tags: "dev"
+  name: vpc-demo-nginx-dev
+  namespace: demo
+spec:
+  ports:
+  - port: 80
+    protocol: TCP
+    targetPort: 80
+    nodePort: 30080
+  selector:
+    app: vpc-demo-nginx-dev
+  sessionAffinity: None
+  type: NodePort
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: vpc-demo-nginx-dev
+  namespace: demo
+  labels:
+    app: vpc-demo-nginx-dev
+spec:
+  selector:
+    matchLabels:
+      app: vpc-demo-nginx-dev
+  replicas: 2 # 告知 Deployment 运行 2 个与该模板匹配的 Pod
+  template:
+    metadata:
+      labels:
+        app: vpc-demo-nginx-dev
+      annotations:
+        consul.register/enabled: "true"
+        consul.register/enabled.podip: "true"
+        # consul.register/port.3500: vpc.minibase.fronted
+    spec:
+      containers:
+      - name: vpc-demo-nginx-dev
+        image: registry.stardream.link/nginx:1.25.3
+        ports:
+        - containerPort: 80
+      imagePullSecrets:
+      - name: stardreamkey
