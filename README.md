@@ -1,7 +1,6 @@
-# Kubernetes Consul Register [![Build Status](https://travis-ci.org/warjiang/kube-consul-register.svg?branch=master)](https://travis-ci.org/warjiang/kube-consul-register)
+# Kubernetes Consul Register [![Push latest image](https://github.com/warjiang/kube-consul-register/actions/workflows/dockerhub-latest-image.yml/badge.svg)](https://github.com/warjiang/kube-consul-register/actions/workflows/dockerhub-latest-image.yml)
 
 > Notice: this is repo is forked from upstream repo [tczekajlo/kube-consul-register](https://github.com/tczekajlo/kube-consul-register), and is maintained actively.
-
 The kube-consul-register is a tool to register Kubernetes PODs as Consul Services.
 
 kube-consul-register watches Kubernetes events and converts information about PODs to Consul Agent.
@@ -45,23 +44,23 @@ To store configuration is used [ConfigMap](https://github.com/kubernetes/kuberne
 You can find [example of configuration](https://github.com/warjiang/kube-consul-register/blob/master/examples/config.yaml) with default values in examples directory.
 In order to use ConfigMap configuration you've to use `configmap` flag. Value of this flag has format `namespace/configmap_name`, e.g. `-configmap="default/kube-consul-register-config"`.
 
-| Option name                   | Default value    | Description                                                                                                                                                                                         |
-|-------------------------------|------------------|-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
-| `consul_address`              | `localhost`      | The address of Consul Agent. This option is taken into account only in case where `register_mode` is set to `single`                                                                                |
-| `consul_port`                 | `8500`           | The port number of Consul Agent                                                                                                                                                                     |
-| `consul_scheme`               | `http`           | Connection scheme. Available options: `http`, `https`, `consul-unix`                                                                                                                                |
-| `consul_ca_file`              |                  | Path to a CA certificate file                                                                                                                                                                       |
-| `consul_cert_file`            |                  | Path to an SSL client certificate to use to authenticate to the Consul server                                                                                                                       |
-| `consul_key_file`             |                  | Path to an SSL client certificate key to use to authenticate to the Consul server                                                                                                                   |
-| `consul_insecure_skip_verify` | `false`          | Skip verifying certificates when connecting via SSL                                                                                                                                                 |
-| `consul_token`                |                  | The Consul ACL token. Token is used to provide a per-request ACL token which overrides the agent's default token                                                                                    |
-| `consul_timeout`              | `2s`             | Time limit for requests made by the Consul HTTP client. A Timeout of zero means no timeout                                                                                                          |
-| `consul_container_name`       | `consul`         | The name of container in POD with Consul Agent. The container with given name will be skip and not registered in Consul. This options is taken into account only if `register_mode` is set to `pod` |
-| `consul_node_selector`        | `consul=enabled` | Node label which is used to select nodes with Consul agent. This option is taken into account only if `register_mode` is equal to `node`                                                            |
-| `pod_label_selector`          |                  | Pay heed only to PODs with the given label                                                                                                                                                          |
-| `k8s_tag`                     | `kubernetes`     | The name of tag which is added to every Consul Service. This tag identifies all Consul Services which has been registered by kube-consul-register                                                   |
-| `register_mode`               | `single`         | The mode of register. Available options: `single`, `pod`, `node`                                                                                                                                    |
-| `register_source`             | `pod`            | Source name which is watching in order to add services to Consul. Available options: `pod`, `service`, `endpoint`                                                                                   |
+| Option name | Default value | Description |
+|-------------|---------------|-------------|
+|`consul_address`|`localhost`| The address of Consul Agent. This option is taken into account only in case where `register_mode` is set to `single`|
+|`consul_port`|`8500`| The port number of Consul Agent|
+|`consul_scheme`|`http`| Connection scheme. Available options: `http`, `https`, `consul-unix`|
+|`consul_ca_file`|| Path to a CA certificate file|
+|`consul_cert_file`|| Path to an SSL client certificate to use to authenticate to the Consul server|
+|`consul_key_file`|| Path to an SSL client certificate key to use to authenticate to the Consul server|
+|`consul_insecure_skip_verify`|`false`| Skip verifying certificates when connecting via SSL|
+|`consul_token`|| The Consul ACL token. Token is used to provide a per-request ACL token which overrides the agent's default token|
+|`consul_timeout`|`2s`| Time limit for requests made by the Consul HTTP client. A Timeout of zero means no timeout|
+|`consul_container_name`|`consul`| The name of container in POD with Consul Agent. The container with given name will be skip and not registered in Consul. This options is taken into account only if `register_mode` is set to `pod`|
+|`consul_node_selector`|`consul=enabled`| Node label which is used to select nodes with Consul agent. This option is taken into account only if `register_mode` is equal to `node`|
+|`pod_label_selector`|| Pay heed only to PODs with the given label |
+|`k8s_tag`|`kubernetes`| The name of tag which is added to every Consul Service. This tag identifies all Consul Services which has been registered by kube-consul-register|
+|`register_mode`|`single`| The mode of register. Available options: `single`, `pod`, `node`|
+|`register_source`|`pod`| Source name which is watching in order to add services to Consul. Available options: `pod`, `service`, `endpoint`|
 
 ### Register mode
 The `register_mode` option determine to which Consul Agent a services should be registered.
@@ -88,14 +87,14 @@ If you want to use Kubernetes Services you have to set value of `register_source
 There are available annotations which can be used as pod's annotations.
 
 
-| Name                                            | Value            | Description                                                                                                                                                     |
-|-------------------------------------------------|------------------|-----------------------------------------------------------------------------------------------------------------------------------------------------------------|
-| `consul.register/enabled`                       | `true`\|`false`  | Determine if pod should be registered in Consul. This annotation is require in order to register pod as Consul service                                          |
-| `consul.register/service.name`                  | `service_name`   | Determine name of service in Consul. If not given then is used the name of resource which created the POD. Only available if `register_source` is set on `pod`  |
-| `consul.register/service.meta.<key>`            | `<value>`        | Adds `key`/`value` service meta. Eg. `"consul.register/service.meta.redis_version"`=`"4.0"` results in meta `redis_version=4.0`                                 |
-| `consul.register/pod.container.name`            | `container_name` | Container name or list of names (next name should be separated by comma) which will be taken into account. If omitted, all containers in POD will be registered |
-| `consul.register/pod.container.probe.liveness`  | `true`\|`false`  | Use container `Liveness probe` for checks. Default is `true`.                                                                                                   |
-| `consul.register/pod.container.probe.readiness` | `true`\|`false`  | Use container `Readiness probe` for checks. Default is `false`                                                                                                  |
+|Name|Value|Description|
+|----|-----|-----------|
+|`consul.register/enabled`|`true`\|`false`|Determine if pod should be registered in Consul. This annotation is require in order to register pod as Consul service|
+|`consul.register/service.name`|`service_name`|Determine name of service in Consul. If not given then is used the name of resource which created the POD. Only available if `register_source` is set on `pod`|
+|`consul.register/service.meta.<key>`|`<value>`|Adds `key`/`value` service meta. Eg. `"consul.register/service.meta.redis_version"`=`"4.0"` results in meta `redis_version=4.0`|
+|`consul.register/pod.container.name`|`container_name`|Container name or list of names (next name should be separated by comma) which will be taken into account. If omitted, all containers in POD will be registered|
+|`consul.register/pod.container.probe.liveness`|`true`\|`false`|Use container `Liveness probe` for checks. Default is `true`.
+|`consul.register/pod.container.probe.readiness`|`true`\|`false`|Use container `Readiness probe` for checks. Default is `false`|
 
 
 The example of how to use annotation you can see [here](https://github.com/warjiang/kube-consul-register/blob/master/examples/nginx.yaml).
