@@ -9,7 +9,7 @@ permissions:
 
 jobs:
   build:
-    name: Build and push web image
+    name: Build and push image
     if: ${{ github.repository == 'warjiang/kube-consul-register' }}
     runs-on: ubuntu-22.04
     steps:
